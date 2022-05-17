@@ -29,21 +29,24 @@ static void do_ls(char *path) {
         exit(1);
     }
     while (ent = readdir(d)) { /* ② */
-        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue;
+        if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) continue; // ent->d_name が "." または ".." だったら、中断して次のentへ
         printf("%s\n", ent->d_name);
-        int len = strlen(path) + strlen(ent->d_name) + 2; // 文字列の長さ + / + \0 
+
+        // この後の結果格納用変数を用意
+        int len = strlen(path) + strlen(ent->d_name) + 2; // 文字列の長さ + (/ と \0 の2文字分)
         char new_path[len];
+        snprintf(new_path, len, "%s/%s", path, ent->d_name); // 文字列の連結 path/d_name という文字列を作って、new_path変数に入れる。path//d_name みたいになることがあるが、問題なさそう。
+        
         struct stat st;
-        snprintf(new_path, len, "%s/%s", path, ent->d_name); // 文字列の連結（バッファオーバーフローをケア）dir//hoge みたいになることがあるが、問題なさそう。
         if (lstat(new_path, &st) < 0) {
             // perror(new_path);
-            continue;
+            continue; // lstat に失敗したら中断して次のentへ（これはexitしてしまっても良い）
         }
-        if (!S_ISDIR(st.st_mode)) { // ディレクトリじゃなかったら抜ける
+        if (!S_ISDIR(st.st_mode)) { // ディレクトリじゃなかったら、中断して次のentへ
             // printf("%s is not a directory.\n", new_path);
             continue;
         } 
-        do_ls(new_path); // ここまでの審査をくぐり抜けた場合は do_ls を再帰呼び出し
+        do_ls(new_path); // ここまできているということは、"." でも ".." でもないディレクトリなので、引数を new_path に変えて do_ls を再帰呼び出し
     }
     closedir(d); 
 }
